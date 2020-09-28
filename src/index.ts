@@ -25,15 +25,15 @@ export function findPort(port: number) {
 }
 
 export function encodeTerrain(terrain: any) {
-    const result = '';
+    let result = '';
     for (let y = 0; y < 50; y++) {
         for (let x = 0; x < 50; x++) {
             let objects = _.filter(terrain, { x, y }),
                 code = 0;
-            if (_.any(objects, { type: 'wall' })) {
+            if (_.some(objects, { type: 'wall' })) {
                 code = code | 1;
             }
-            if (_.any(objects, { type: 'swamp' })) {
+            if (_.some(objects, { type: 'swamp' })) {
                 code = code | 2;
             }
             result = result + code;
@@ -47,7 +47,7 @@ export function decodeTerrain(str: string, room: any) {
 
     for (let y = 0; y < 50; y++) {
         for (let x = 0; x < 50; x++) {
-            const code = str.charAt(y * 50 + x);
+            const code = parseInt(str.charAt(y * 50 + x), 10);
             if (code & 1) {
                 result.push({ room, x, y, type: 'wall' });
             }
@@ -71,7 +71,7 @@ export function getGametime() {
 export function getDiff(oldData, newData) {
 
     function getIndex(data) {
-        var index = {};
+        let index = {};
         _.forEach(data, (obj) => index[obj._id] = obj);
         return index;
     }
@@ -83,23 +83,23 @@ export function getDiff(oldData, newData) {
 
     _.forEach(oldData, (obj) => {
         if (newIndex[obj._id]) {
-            var newObj = newIndex[obj._id];
-            var objDiff = result[obj._id] = {};
-            for (var key in obj) {
+            let newObj = newIndex[obj._id];
+            let objDiff = result[obj._id] = {};
+            for (let key in obj) {
                 if (_.isUndefined(newObj[key])) {
                     objDiff[key] = null;
-                } else if ((typeof obj[key]) != (typeof newObj[key]) || obj[key] && !newObj[key]) {
+                } else if ((typeof obj[key]) !== (typeof newObj[key]) || obj[key] && !newObj[key]) {
                     objDiff[key] = newObj[key];
                 } else if (_.isObject(obj[key])) {
 
                     objDiff[key] = {};
 
-                    for (var subkey in obj[key]) {
+                    for (let subkey in obj[key]) {
                         if (!_.isEqual(obj[key][subkey], newObj[key][subkey])) {
                             objDiff[key][subkey] = newObj[key][subkey];
                         }
                     }
-                    for (var subkey in newObj[key]) {
+                    for (let subkey in newObj[key]) {
                         if (_.isUndefined(obj[key][subkey])) {
                             objDiff[key][subkey] = newObj[key][subkey];
                         }
@@ -111,7 +111,7 @@ export function getDiff(oldData, newData) {
                     objDiff[key] = newObj[key];
                 }
             }
-            for (var key in newObj) {
+            for (let key in newObj) {
                 if (_.isUndefined(obj[key])) {
                     objDiff[key] = newObj[key];
                 }
@@ -133,47 +133,46 @@ export function getDiff(oldData, newData) {
     return result;
 }
 
+/**
+ *
+*/
 export function qSequence(collection, fn) {
     return _.reduce(collection, (promise, element, key) => promise.then(() => fn(element, key)), q.when());
 }
 
-export function roomNameToXY(name) {
+/**
+ * Takes a room name in the format of 'W3N6' and returns the x/y coordinates
+*/
+export function roomNameToXY(name: string): [number, number] {
 
     name = name.toUpperCase();
 
-    var match = name.match(/^(\w)(\d+)(\w)(\d+)$/);
+    const match = name.match(/^(\w)(\d+)(\w)(\d+)$/);
     if (!match) {
         return [undefined, undefined];
     }
-    var [, hor, x, ver, y] = match;
-
-    if (hor === 'W') {
-        x = -x - 1;
-    } else {
-        x = +x;
-    }
-    if (ver === 'N') {
-        y = -y - 1;
-    } else {
-        y = +y;
-    }
-    return [x, y];
+    let [, hor, x, ver, y] = match;
+    return [hor === 'W' ? -x - 1 : +x, ver === 'N' ? -y - 1 : +y];
 }
 
-/** Calculates the room name string based on x/y coordinates*/
+/**
+ * Calculates the room name string based on x/y coordinates
+*/
 export function getRoomNameFromXY(x: number, y: number): string {
     return `${x < 0 ? 'W' + (-x - 1) : 'E' + (x)}${y < 0 ? 'N' + (-y - 1) : 'S' + (y)}`;
 }
 
-/** Calculates the size of the world based on the rooms in the world*/
+/**
+ * Calculates the size of the world based on the rooms in the world
+*/
 export function calcWorldSize(rooms: any[]): number {
     let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
     rooms.forEach(room => {
         const [x, y] = exports.roomNameToXY(room._id);
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
+        if (x < minX) { minX = x; }
+        if (y < minY) { minY = y; }
+        if (x > maxX) { maxX = x; }
+        if (y > maxY) { maxY = y; }
     });
     return Math.max(maxX - minX + 1, maxY - minY + 1);
 }

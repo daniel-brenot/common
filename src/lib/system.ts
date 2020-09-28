@@ -10,7 +10,7 @@ const transforms = {
     userText: value => ('' + (value || '')).substring(0, 1000),
     'string[]': value => _.isArray(value) ? _.map(value, i => '' + i) : undefined,
     'number[]': value => _.isArray(value) ? _.map(value, i => parseInt(i, 10)) : undefined,
-    'bodypart[]': value => _.filter(value, i => C.BODYPARTS_ALL. _.contains(C.BODYPARTS_ALL, i)),
+    'bodypart[]': value => _.filter(value, i => C.BODYPARTS_ALL.includes(i)),
 };
 
 const intents = {
@@ -81,10 +81,10 @@ const intents = {
     withdraw: { id: 'string', amount: 'number', resourceType: 'string' }
 };
 
-function sanitizeIntent(name, intent) {
+function sanitizeIntent(name: string, intent: Record<string, string>) {
     const result = {};
 
-    for (let field in intents[name]) {
+    for (const field of Object.values<string>(intents[name])) {
         result[field] = transforms[intents[name][field]](intent[field]);
     }
 

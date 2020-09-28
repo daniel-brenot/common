@@ -29,13 +29,13 @@ export const config = {
             'users.notifications',
             'users.resources',
             'users.power_creeps'
-        ]
+        ],
+        bots: null as Record<any, string>
     },
     constants,
     storage,
     strongholds,
-    system,
-    bots: {}
+    system
 };
 
 export function load() {

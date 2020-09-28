@@ -1,26 +1,35 @@
 import { Writable } from 'stream';
 import * as q from 'q';
 import { EventEmitter } from 'events';
+import { Socket } from 'net';
 
 export class JSONFrameStream extends Writable {
 
-    constructor(handler, options?) {
+    handler: any;
+    frame: {
+        data: Buffer;
+        pointer?: number;
+        size?: number;
+    };
+
+    constructor(handler: any, options?) {
         super(options);
         this.handler = handler;
         this.frame = null;
     }
 
-    static makeFrame(obj) {
+    static makeFrame(obj): Buffer {
         const data = Buffer.from(JSON.stringify(obj), 'utf8');
         const length = Buffer.alloc(4);
         length.writeUInt32BE(data.length);
         return Buffer.concat([length, data]);
     }
 
-    _write(chunk, encoding, callback) {
+    _write(chunk, encoding: string, callback) {
         this._parse(chunk);
         callback();
     }
+
     _parse(buffer) {
         if (!buffer.length) {
             return;
@@ -45,7 +54,7 @@ export class JSONFrameStream extends Writable {
             const length = Math.min(buffer.length, this.frame.size - this.frame.pointer);
             buffer.copy(this.frame.data, this.frame.pointer, 0, length);
             this.frame.pointer += length;
-            if (this.frame.pointer == this.frame.size) {
+            if (this.frame.pointer === this.frame.size) {
                 this.handler(JSON.parse(this.frame.data.toString('utf8')));
                 this.frame = null;
             }
@@ -55,7 +64,12 @@ export class JSONFrameStream extends Writable {
 }
 
 export class RpcServer {
-    constructor(socket, methods) {
+
+    socket: Socket;
+    methods: any;
+    channelUnsubscribe: Map<string, any>;
+
+    constructor(socket: Socket, methods) {
         this.socket = socket;
         this.socket.pipe(new JSONFrameStream(this._processFrame.bind(this)));
         this.methods = methods;
@@ -68,7 +82,7 @@ export class RpcServer {
 
     _processFrame(obj) {
         let args = obj.args || [];
-        if (obj.method == 'subscribe') {
+        if (obj.method === 'subscribe') {
             if (this.channelUnsubscribe.has('*')) {
                 return;
             }
@@ -85,19 +99,24 @@ export class RpcServer {
             return;
         }
         this.methods[obj.method].apply(null, args.concat([(error, result) => {
-            let response = { id: obj.id };
-            if (error) {
-                response.error = error;
-            } else {
-                response.result = result;
-            }
+            let response = {
+                id: obj.id,
+                error,
+                result: error ? undefined : result
+            };
             this.socket.write(JSONFrameStream.makeFrame(response));
         }]));
     }
 }
 
 export class RpcClient {
-    constructor(socket) {
+
+    socket: Socket;
+    requestId: number;
+    defers: Map<any, any>;
+    pubsub: EventEmitter;
+
+    constructor(socket: Socket) {
         this.socket = socket;
         this.socket.pipe(new JSONFrameStream(this._processFrame.bind(this)));
         this.requestId = 0;
